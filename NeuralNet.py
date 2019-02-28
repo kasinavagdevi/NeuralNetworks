@@ -15,9 +15,6 @@
 #   w12, delata12, X12 - weights, updates and outputs for connection from layer 1 (first hidden) to layer 2 (second hidden)
 #   w23, delta23, X23 - weights, updates and outputs for connection from layer 2 (second hidden) to layer 3 (output layer)
 #
-#   You need to complete all TODO marked sections
-#   You are free to modify this code in any way you want, but need to mention it in the README file.
-#
 #####################################################################################################################
 
 
@@ -34,7 +31,7 @@ class NeuralNet:
 
         raw_input = pd.read_csv(train)
         self.activation = activation
-        # TODO: Remember to implement the preprocess method
+
         train_dataset = self.preprocess(raw_input)
         ncols = len(train_dataset.columns)
         nrows = len(train_dataset.index)
@@ -63,28 +60,28 @@ class NeuralNet:
         self.deltaOut = np.zeros((output_layer_size, 1))
 
     #
-    # TODO: I have coded the sigmoid activation function, you need to do the same for tanh and ReLu
+    # The activation function for sigmoid, tanh and relu
     #
 
     def __activation(self, x):
         if self.activation == "sigmoid":
-            self.__sigmoid(self, x)
+            return self.__sigmoid(x)
         elif self.activation == "tanh":
-            self.__tanh(self, x)
+            return self.__tanh(x)
         elif self.activation == "reLu":
-            self.__reLu(self, x)
+            return self.__reLu(x)
 
     #
-    # TODO: Define the function for tanh, ReLu and their derivatives
+    # The activation derivative function for sigmoid, tanh and relu
     #
 
     def __activation_derivative(self, x):
         if self.activation == "sigmoid":
-            self.__sigmoid_derivative(self, x)
+            return self.__sigmoid_derivative(x)
         elif self.activation == "tanh":
-            self.__tanh_derivative(self, x)
+            return self.__tanh_derivative(x)
         elif self.activation == "reLu":
-            self.__reLu_derivative(self, x)
+            return self.__reLu_derivative(x)
 
     def __sigmoid(self, x):
         return 1 / (1 + np.exp(-x))
@@ -95,14 +92,17 @@ class NeuralNet:
         return x * (1 - x)
 
     def __tanh(self, x):
-        return (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x))
+        ex = np.exp(x)
+        e_minus_x = np.exp(-x)
+        return (ex - e_minus_x) / (ex + e_minus_x)
 
     def __tanh_derivative(self, x):
         return 1 - np.power(x, 2)
 
     def __reLu(self, x):
         zeros = np.zeros(x.shape)
-        return np.maximum(zeros,x)
+        out = np.maximum(zeros, x)
+        return out
 
     def __reLu_derivative(self, x):
         x[x > 0] = 1
@@ -110,17 +110,18 @@ class NeuralNet:
         return x
 
     #
-    # TODO: Write code for pre-processing the dataset, which would include standardization, normalization,
+    #  Pre-processing the dataset, which would include standardization, normalization,
     #   categorical to numerical, etc
     #
 
     def preprocess(self, X):
         X = X.dropna()
         X = X.drop_duplicates()
-        X["Y1"] = (X["Y"]=="Iris-setosa")*1
+        # The output layer is having 3 neurons as there are 3 different classes.
+        X["Y1"] = (X["Y"] == "Iris-setosa") * 1
         X["Y2"] = (X["Y"] == "Iris-versicolor") * 1
         X["Y3"] = (X["Y"] == "Iris-virginica") * 1
-        X = X.drop("Y",1)
+        X = X.drop("Y", 1)
         # X.loc[X["Y"] == "Iris-setosa", "Y"] = np.ndarray([1, 0, 0])
         # X.loc[X["Y"] == "Iris-versicolor", "Y"] = np.ndarray([0, 1, 0])
         # X.loc[X["Y"] == "Iris-virginica", "Y"] = np.ndarray([0, 0, 1])
@@ -131,9 +132,10 @@ class NeuralNet:
 
         return X
 
-    # Below is the training function
+    # Training function
 
     def train(self, max_iterations=1000, learning_rate=0.05):
+        error = 0
         for iteration in range(max_iterations):
             out = self.forward_pass()
             error = 0.5 * np.power((out - self.y), 2)
@@ -154,27 +156,12 @@ class NeuralNet:
 
     def forward_pass(self):
         # pass our inputs through our neural network
-        if self.activation == "sigmoid":
-            in1 = np.dot(self.X, self.w01)
-            self.X12 = self.__sigmoid(in1)
-            in2 = np.dot(self.X12, self.w12)
-            self.X23 = self.__sigmoid(in2)
-            in3 = np.dot(self.X23, self.w23)
-            out = self.__sigmoid(in3)
-        elif self.activation == "tanh":
-            in1 = np.dot(self.X, self.w01)
-            self.X12 = self.__tanh(in1)
-            in2 = np.dot(self.X12, self.w12)
-            self.X23 = self.__tanh(in2)
-            in3 = np.dot(self.X23, self.w23)
-            out = self.__tanh(in3)
-        elif self.activation == "reLu":
-            in1 = np.dot(self.X, self.w01)
-            self.X12 = self.__reLu(in1)
-            in2 = np.dot(self.X12, self.w12)
-            self.X23 = self.__reLu(in2)
-            in3 = np.dot(self.X23, self.w23)
-            out = self.__reLu(in3)
+        in1 = np.dot(self.X, self.w01)
+        self.X12 = self.__activation(in1)
+        in2 = np.dot(self.X12, self.w12)
+        self.X23 = self.__activation(in2)
+        in3 = np.dot(self.X23, self.w23)
+        out = self.__activation(in3)
         return out
 
     def backward_pass(self, out):
@@ -183,57 +170,27 @@ class NeuralNet:
         self.compute_hidden_layer2_delta()
         self.compute_hidden_layer1_delta()
 
-    # TODO: Implement other activation functions
+    # Computing the deltas
 
     def compute_output_delta(self, out):
-        if self.activation == "sigmoid":
-            delta_output = (self.y - out) * (self.__sigmoid_derivative(out))
-        elif self.activation == "tanh":
-            delta_output = (self.y - out) * (self.__tanh_derivative(out))
-        elif self.activation == "reLu":
-            delta_output = (self.y - out) * (self.__reLu_derivative(out))
-
+        delta_output = (self.y - out) * (self.__activation_derivative(out))
         self.deltaOut = delta_output
 
-    # TODO: Implement other activation functions
-
     def compute_hidden_layer2_delta(self):
-        if self.activation == "sigmoid":
-            delta_hidden_layer2 = (self.deltaOut.dot(self.w23.T)) * (self.__sigmoid_derivative(self.X23))
-        elif self.activation == "tanh":
-            delta_hidden_layer2 = (self.deltaOut.dot(self.w23.T)) * (self.__tanh_derivative(self.X23))
-        elif self.activation == "reLu":
-            delta_hidden_layer2 = (self.deltaOut.dot(self.w23.T)) * (self.__reLu_derivative(self.X23))
-
+        delta_hidden_layer2 = (self.deltaOut.dot(self.w23.T)) * (self.__activation_derivative(self.X23))
         self.delta23 = delta_hidden_layer2
 
-    # TODO: Implement other activation functions
-
     def compute_hidden_layer1_delta(self):
-        if self.activation == "sigmoid":
-            delta_hidden_layer1 = (self.delta23.dot(self.w12.T)) * (self.__sigmoid_derivative(self.X12))
-        elif self.activation == "tanh":
-            delta_hidden_layer1 = (self.delta23.dot(self.w12.T)) * (self.__tanh_derivative(self.X12))
-        elif self.activation == "reLu":
-            delta_hidden_layer1 = (self.delta23.dot(self.w12.T)) * (self.__reLu_derivative(self.X12))
-
+        delta_hidden_layer1 = (self.delta23.dot(self.w12.T)) * (self.__activation_derivative(self.X12))
         self.delta12 = delta_hidden_layer1
 
-    # TODO: Implement other activation functions
-
     def compute_input_layer_delta(self):
-        if self.activation == "sigmoid":
-            delta_input_layer = np.multiply(self.__sigmoid_derivative(self.X01), self.delta01.dot(self.w01.T))
-        elif self.activation == "tanh":
-            delta_input_layer = np.multiply(self.__tanh_derivative(self.X01), self.delta01.dot(self.w01.T))
-        elif self.activation == "reLu":
-            delta_input_layer = np.multiply(self.__reLu_derivative(self.X01), self.delta01.dot(self.w01.T))
-
+        delta_input_layer = np.multiply(self.__activation_derivative(self.X01), self.delta01.dot(self.w01.T))
         self.delta01 = delta_input_layer
 
-    # TODO: Implement the predict function for applying the trained model on the  test dataset.
-    # You can assume that the test dataset has the same format as the training dataset
-    # You have to output the test error from this function
+    # Implementation of predict function
+    # Assuming that the test dataset has the same format as the training dataset
+    # output the test error from this function
 
     def predict(self, test, header=True):
         testDF = pd.read_csv(test)
@@ -245,18 +202,14 @@ class NeuralNet:
         out = self.forward_pass()
         error = np.power((out - self.y), 2)
         test_error = 0.5 * np.sum(error)
-        print("accuracy = " + str(100-test_error))
+        print("accuracy = " + str(100 - test_error))
         return test_error
 
 
 if __name__ == "__main__":
-    neural_network = NeuralNet("iris.train.csv",activation="reLu")
-    # neural_network.train(max_iterations=1000, learning_rate=0.05, activation="sigmoid")
-    # testError = neural_network.predict("iris.test.csv")
-    # print("Test Error is equal : " + str(testError))
-    # neural_network.train(max_iterations=1000, learning_rate=0.05, activation="tanh")
-    # testError = neural_network.predict("iris.test.csv")
-    # print("Test Error is equal : " + str(testError))
-    neural_network.train(max_iterations=1000, learning_rate=0.05)
-    testError = neural_network.predict("iris.test.csv")
-    print("Test Error is equal : " + str(testError))
+    activations = ["sigmoid", "tanh", "reLu"]
+    for activation in activations:
+        neural_network = NeuralNet("iris.train.csv", activation)
+        neural_network.train(max_iterations=1000, learning_rate=0.01)
+        testError = neural_network.predict("iris.test.csv")
+        print("Test Error is equal : " + str(testError))
